@@ -48,6 +48,8 @@ export interface ConsentConfig {
   storageKey?: string;
   /** Months until consent expires (default: 12) */
   expiryMonths?: number;
+  /** Default EU status when country code is unavailable (default: true for privacy-first) */
+  defaultIsEU?: boolean;
 }
 
 export interface ConsentProviderProps {
@@ -111,6 +113,7 @@ export function ConsentProvider({
     euCountries = DEFAULT_EU_COUNTRIES,
     storageKey = DEFAULT_CONSENT_KEY,
     expiryMonths = DEFAULT_EXPIRY_MONTHS,
+    defaultIsEU = true,
   } = config;
 
   const [consentStatus, setConsentStatus] = useState<
@@ -118,10 +121,10 @@ export function ConsentProvider({
   >("pending");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Determine if user is in EU (default to true if unknown for privacy-first approach)
+  // Determine if user is in EU (uses defaultIsEU when country code unavailable)
   const isEU = countryCode
     ? euCountries.includes(countryCode.toUpperCase())
-    : true;
+    : defaultIsEU;
 
   // Load stored consent on mount
   useEffect(() => {
