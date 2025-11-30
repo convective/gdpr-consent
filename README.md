@@ -2,13 +2,16 @@
 
 GDPR-compliant geo-targeted cookie consent for Next.js applications.
 
+[![npm version](https://img.shields.io/npm/v/@convective/gdpr-consent.svg)](https://www.npmjs.com/package/@convective/gdpr-consent)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Features
 
 - Geo-targeted consent (EU/EEA users only see banner)
 - CloudFront header support (AWS Amplify, CloudFront)
 - Equal Accept/Reject buttons (GDPR 2025 compliant)
 - 12-month consent expiration with audit trail
-- Privacy-first: defaults to EU treatment if location unknown
+- Privacy-first: configurable default when location unknown
 - Fully customizable styling and text
 - TypeScript support
 
@@ -25,16 +28,23 @@ npm install @convective/gdpr-consent
 ```tsx
 // app/layout.tsx
 import { headers } from "next/headers";
-import { ConsentProvider } from "@convective/gdpr-consent";
+import { ConsentProvider, CookieBanner } from "@convective/gdpr-consent";
 
 export default async function RootLayout({ children }) {
   const headersList = await headers();
-  const countryCode = headersList.get("cloudfront-viewer-country");
+
+  // Support env var override for testing, fallback to CloudFront header
+  const countryCode = process.env.NEXT_PUBLIC_TEST_COUNTRY
+    || headersList.get("cloudfront-viewer-country");
 
   return (
     <html>
       <body>
-        <ConsentProvider countryCode={countryCode}>
+        <ConsentProvider
+          countryCode={countryCode}
+          config={{ defaultIsEU: process.env.NODE_ENV === "production" }}
+        >
+          <CookieBanner privacyPolicyUrl="/privacy" />
           {children}
         </ConsentProvider>
       </body>
@@ -43,16 +53,7 @@ export default async function RootLayout({ children }) {
 }
 ```
 
-### 2. Add the Cookie Banner
-
-```tsx
-// app/layout.tsx or a component
-import { CookieBanner } from "@convective/gdpr-consent";
-
-<CookieBanner privacyPolicyUrl="/privacy" />
-```
-
-### 3. Conditionally load analytics
+### 2. Conditionally load analytics
 
 ```tsx
 "use client";
@@ -72,7 +73,7 @@ export function GoogleAnalytics() {
 }
 ```
 
-### 4. Add Cookie Preferences button (footer)
+### 3. Add Cookie Preferences button (footer)
 
 ```tsx
 import { CookiePreferencesButton } from "@convective/gdpr-consent";
@@ -83,23 +84,36 @@ import { CookiePreferencesButton } from "@convective/gdpr-consent";
 
 ## Configuration
 
-### ConsentProvider options
+### ConsentProvider Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `countryCode` | `string \| null` | Yes | ISO 3166-1 alpha-2 country code |
+| `config` | `ConsentConfig` | No | Configuration options |
+
+### ConsentConfig Options
 
 ```tsx
 <ConsentProvider
   countryCode={countryCode}
   config={{
-    // Custom EU country list
-    euCountries: ["DE", "FR", "GB"],
-    // localStorage key
+    // List of country codes requiring consent (default: EU/EEA + UK)
+    euCountries: ["DE", "FR", "GB", ...],
+
+    // localStorage key (default: "gdpr_cookie_consent")
     storageKey: "my_cookie_consent",
-    // Expiry in months
+
+    // Consent expiry in months (default: 12)
     expiryMonths: 6,
+
+    // Default EU status when country code unavailable (default: true)
+    // Set to false in development to hide banner during local testing
+    defaultIsEU: process.env.NODE_ENV === "production",
   }}
 >
 ```
 
-### CookieBanner props
+### CookieBanner Props
 
 | Prop | Type | Default |
 |------|------|---------|
@@ -112,7 +126,7 @@ import { CookiePreferencesButton } from "@convective/gdpr-consent";
 | `style` | CSSProperties | - |
 | `children` | render function | - |
 
-### Custom banner rendering
+### Custom Banner Rendering
 
 ```tsx
 <CookieBanner>
@@ -145,7 +159,26 @@ This package reads the `cloudfront-viewer-country` header, available in:
 - AWS Amplify (since August 2024)
 - CloudFront distributions with geo headers enabled
 
-If the header is missing, it defaults to EU treatment (privacy-first).
+### Behavior by Environment
+
+| Environment | Country Code | defaultIsEU | Banner Shown |
+|-------------|--------------|-------------|--------------|
+| Development | Not available | `false` | No |
+| Development | `DE` (via env var) | `false` | Yes |
+| Production | `US` (CloudFront) | `true` | No |
+| Production | `DE` (CloudFront) | `true` | Yes |
+| Production | Not available | `true` | Yes (privacy-first) |
+
+## Local Development Testing
+
+To test the EU cookie banner in local development, add to `.env.local`:
+
+```bash
+# Simulate EU location for testing
+NEXT_PUBLIC_TEST_COUNTRY=DE
+```
+
+Restart the dev server after changing. Remove or set to `US` to hide the banner.
 
 ## GDPR 2025 Compliance
 
