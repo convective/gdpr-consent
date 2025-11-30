@@ -15,10 +15,6 @@ GDPR-compliant geo-targeted cookie consent for Next.js applications.
 ## Installation
 
 ```bash
-# Configure npm for @convective scope
-echo "@convective:registry=https://npm.pkg.github.com" >> .npmrc
-
-# Install
 npm install @convective/gdpr-consent
 ```
 
