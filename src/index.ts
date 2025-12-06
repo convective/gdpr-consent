@@ -8,7 +8,11 @@ export {
 } from "./ConsentContext";
 
 // Components
-export { CookieBanner, type CookieBannerProps } from "./CookieBanner";
+export {
+  CookieBanner,
+  type CookieBannerProps,
+  type CookieBannerTheme,
+} from "./CookieBanner";
 export {
   CookiePreferencesButton,
   type CookiePreferencesButtonProps,
